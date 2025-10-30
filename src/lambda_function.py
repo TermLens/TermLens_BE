@@ -11,7 +11,7 @@ def lambda_handler(event, context):
     )
 
     url = event['queryStringParameters']['url']
-    text_html = event['queryStringParameters']['body']
+    text_html = event['body']
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
