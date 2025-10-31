@@ -10,6 +10,27 @@ def lambda_handler(event, context):
     model="gemini-2.5-flash-lite", contents="hello to me!"
     )
 
+    # url이 없거나 빈 문자열인 경우
+    if ('queryStringParameters' not in event
+        or 'url' not in event['queryStringParameters']
+        or not event['queryStringParameters']['url']):
+
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'error': 'url 파라미터가 필요합니다.'
+            }, ensure_ascii=False)
+        }
+
+    # body가 없거나 빈 문자열인 경우
+    if 'body' not in event or not event['body']:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'error': '분석할 약관이 없습니다.'
+            }, ensure_ascii=False)
+        }
+
     url = event['queryStringParameters']['url']
     text_html = event['body']
 
