@@ -2,13 +2,12 @@ import json
 import os
 from google import genai
 
+from tos_summarize import tos_summarize
+from tos_evaluate import tos_evaluate
+
 def lambda_handler(event, context):
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
     client = genai.Client(api_key=GEMINI_API_KEY)
-
-    response = client.models.generate_content(
-    model="gemini-2.5-flash-lite", contents="hello to me!"
-    )
 
     # url이 없거나 빈 문자열인 경우
     if ('queryStringParameters' not in event
@@ -36,27 +35,17 @@ def lambda_handler(event, context):
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
-    # TODO: text_html 문자열에서 중요 조항 위주로 약관 요약
+    # text_html 문자열에서 중요 조항 위주로 약관 요약
+    summarized_tos = tos_summarize(text_html, client)
 
-    # TODO: 각 요약된 조항에 대해 분석 수행
+    # 약관 조항에 대해 분석 수행
+    # gemini api의 rate limit 문제로, 여러 조항을 한 번에 보내지 않고 하나씩 처리
+    evaluation_result = tos_evaluate(summarized_tos, client)
 
     return {
         'statusCode': 200,
         'body': json.dumps({
-            "overall_evaluation": "E",
-            "evaluation_for_each_clause": [
-                {
-                    "evaluation": "neutral",
-                    "summarized_clause": "이용자는 본 약관에 동의함으로써 당 서비스를 이용할 수 있습니다."
-                },
-                {
-                    "evaluation": "neutral",
-                    "summarized_clause": "당 회사는 이용자의 개인정보를 보호하기 위해 최선을 다합니다."
-                },
-                {
-                    "evaluation": "bad",
-                    "summarized_clause": "서비스 이용 중 발생하는 문제에 대해 당 회사는 책임을 지지 않습니다."
-                }
-            ]
+            "overall_evaluation": evaluation_result.get("overall_evaluation"),
+            "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
         }, ensure_ascii=False)
     }
