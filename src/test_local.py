@@ -1,4 +1,3 @@
-import os
 
 from lambda_function import lambda_handler
 
@@ -14,13 +13,6 @@ def create_test_event(url: str, body: str) -> dict:
 
 def run_test():
     """Lambda 함수 로컬 테스트 실행"""
-
-    # GEMINI_API_KEY 확인
-    api_key = os.getenv('GEMINI_API_KEY')
-    if not api_key:
-        print("GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
-        print()
-        return
 
     # 테스트 데이터
     test_url = "https://example.com/terms"
