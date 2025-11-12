@@ -12,7 +12,7 @@ def tos_summarize(text_html):
         region_name="us-west-2"
     )
 
-    model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+    model_id = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     messages = [{
         "role": "user",
         "content": [
