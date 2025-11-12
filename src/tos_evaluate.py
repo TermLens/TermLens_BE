@@ -62,5 +62,10 @@ JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포
     print("TOS Evaluation Response:")
     print(response)
 
+    text = response['output']['message']['content'][0]['text']
+    start = text.find('{')
+    end = text.rfind('}') + 1
+    json_text = text[start:end]
+
     # response에서 JSON 파싱 후 반환
-    return json.loads(response['output']['message']['content'][0]['text'])
+    return json.loads(json_text)
