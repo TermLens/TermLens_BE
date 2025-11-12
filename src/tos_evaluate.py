@@ -3,13 +3,20 @@ import boto3
 
 def tos_evaluate(summarized_tos):
     system_instruction=[{"text": """
-당신은 약관 분석 전문가입니다. 주어진 약관 및 각 조항을 평가합니다.
-각 약관 조항은 good, neutral, bad 중 하나로 평가합니다.
-'good'은 이용자에게 유리한 조항, 'neutral'은 중립적인 조항, 'bad'는 이용자에게 불리한 조항을 의미합니다.
-A, B, C, D, E 등급 중 하나로 전체 약관을 평가합니다.
-A는 매우 우수한 약관, E는 매우 불리한 약관을 의미합니다.
-한국어로 응답합니다.
-아래의 JSON 양식으로 응답합니다:
+당신은 전문적인 약관 분석 AI입니다. 주어진 약관 내용 및 각 조항을 평가합니다.
+주어진 약관은 주요 조항을 위주로 요약된 내용입니다.
+JSON 양식으로, 그리고 어떠한 서론이나 결론 따위 없이 JSON 양식만으로 응답합니다. 다음의 key값을 사용합니다.
+"overall_evaluation": "A|B|C|D|E",
+"evaluation_for_each_clause": [
+    "evaluation": "good|neutral|bad",
+    "summarized_clause": "조항 요약 내용"
+]
+"overall_evaluation"은 전체 약관의 등급을 나타냅니다. A는 가장 우수한 약관, E는 가장 불리한 약관입니다.
+"evaluation_for_each_clause"는 각 조항에 대한 평가를 포함하는 리스트입니다.
+"evaluation"은 각 조항이 소비자에게 유리한지(good)/중립적인지(neutral)/불리한지(bad)를 나타냅니다.
+"summarized_clause"는 각 조항의 요약된 내용을 포함합니다.
+
+예시 응답:
 {
     "overall_evaluation": "D",
     "evaluation_for_each_clause": [
