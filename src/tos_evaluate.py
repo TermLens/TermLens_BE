@@ -5,7 +5,7 @@ def tos_evaluate(summarized_tos):
     system_instruction=[{"text": """
 당신은 전문적인 약관 분석 AI입니다. 주어진 약관 내용 및 각 조항을 평가합니다.
 주어진 약관은 주요 조항을 위주로 요약된 내용입니다.
-JSON 양식으로, 그리고 어떠한 서론이나 결론 따위 없이 JSON 양식만으로 응답합니다. 다음의 key값을 사용합니다.
+JSON 양식으로, 다음의 key값을 사용합니다.
 "overall_evaluation": "A|B|C|D|E",
 "evaluation_for_each_clause": [
     "evaluation": "good|neutral|bad",
@@ -15,7 +15,8 @@ JSON 양식으로, 그리고 어떠한 서론이나 결론 따위 없이 JSON �
 "evaluation_for_each_clause"는 각 조항에 대한 평가를 포함하는 리스트입니다.
 "evaluation"은 각 조항이 소비자에게 유리한지(good)/중립적인지(neutral)/불리한지(bad)를 나타냅니다.
 "summarized_clause"는 각 조항의 요약된 내용을 포함합니다.
-
+JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포함하지 마십시오.
+응답은 곧바로 json.loads()를 통해 파싱되기 때문에 반드시 여는 중괄호(`{`})로 시작하고 닫는 중괄호(`}`)로 끝나야 합니다.
 예시 응답:
 {
     "overall_evaluation": "D",
