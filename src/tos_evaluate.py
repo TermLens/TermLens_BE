@@ -2,20 +2,7 @@ import json
 import boto3
 
 def tos_evaluate(summarized_tos):
-    client = boto3.client(
-    service_name="bedrock-runtime",
-    region_name="us-west-2"
-)
-
-    model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
-    messages = [{
-        "role": "user",
-        "content": [{"text": summarized_tos}]
-        }]
-
-    response = client.converse(
-        modelId=model_id,
-        system="""
+    system_instruction=[{"text": """
 당신은 약관 분석 전문가입니다. 주어진 약관 및 각 조항을 평가합니다.
 각 약관 조항은 good, neutral, bad 중 하나로 평가합니다.
 'good'은 이용자에게 유리한 조항, 'neutral'은 중립적인 조항, 'bad'는 이용자에게 불리한 조항을 의미합니다.
@@ -44,7 +31,23 @@ A는 매우 우수한 약관, E는 매우 불리한 약관을 의미합니다.
         }
     ]
 }
-""",
+"""}]
+    client = boto3.client(
+    service_name="bedrock-runtime",
+    region_name="us-west-2"
+)
+
+    model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+    messages = [{
+        "role": "user",
+        "content": [
+            {"text": summarized_tos}
+        ]
+    }]
+
+    response = client.converse(
+        modelId=model_id,
+        system=system_instruction,
         messages=messages,
     )
 
