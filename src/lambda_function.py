@@ -31,10 +31,10 @@ def lambda_handler(event, context):
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
     # text_html 문자열에서 중요 조항 위주로 약관 요약
-    summarized_tos = None
+    summarized_tos = tos_summarize(text_html)
 
     # 약관 조항에 대해 분석 수행
-    evaluation_result = None
+    evaluation_result = tos_evaluate(summarized_tos)
 
     return {
         'statusCode': 200,
