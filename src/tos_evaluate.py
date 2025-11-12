@@ -44,7 +44,7 @@ JSON 양식으로, 그리고 어떠한 서론이나 결론 따위 없이 JSON �
     region_name="us-west-2"
 )
 
-    model_id = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+    model_id = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
     messages = [{
         "role": "user",
         "content": [
