@@ -3,7 +3,6 @@
 
 # 아키텍처
 AWS Lambda
-Gemini
 
 # Getting Started
 ## 개발환경 구축
@@ -13,7 +12,6 @@ bash를 기준으로 작성됨
 sudo apt install python3.12-venv
 python3 -m venv venv # 가상환경 생성
 source venv/bin/activate # 가상환경 사용
-pip install -q -U google-genai
 ```
 
 이후부터 작업 시 `source venv/bin/activate` 명령으로 가상환경을 실행한 후 작업

@@ -1,14 +1,9 @@
 import json
-import os
-from google import genai
 
 from tos_summarize import tos_summarize
 from tos_evaluate import tos_evaluate
 
 def lambda_handler(event, context):
-    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-    client = genai.Client(api_key=GEMINI_API_KEY)
-
     # url이 없거나 빈 문자열인 경우
     if ('queryStringParameters' not in event
         or 'url' not in event['queryStringParameters']
@@ -36,11 +31,10 @@ def lambda_handler(event, context):
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
     # text_html 문자열에서 중요 조항 위주로 약관 요약
-    summarized_tos = tos_summarize(text_html, client)
+    summarized_tos = tos_summarize(text_html)
 
     # 약관 조항에 대해 분석 수행
-    # gemini api의 rate limit 문제로, 여러 조항을 한 번에 보내지 않고 하나씩 처리
-    evaluation_result = tos_evaluate(summarized_tos, client)
+    evaluation_result = tos_evaluate(summarized_tos)
 
     return {
         'statusCode': 200,
