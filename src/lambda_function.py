@@ -36,7 +36,7 @@ def lambda_handler(event, context):
     
     print(f"원본 html 길이: {original_length} bytes")
     print(f"markdown 길이: {markdown_length} bytes")
-    print(f"감소율: {reduction:.4f}%")
+    print(f"감소율: {reduction:.2f}%")
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
