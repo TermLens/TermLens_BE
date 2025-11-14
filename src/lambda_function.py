@@ -40,7 +40,7 @@ def lambda_handler(event, context):
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
-    # text_html 문자열에서 중요 조항 위주로 약관 요약
+    # tos_content 문자열에서 중요 조항 위주로 약관 요약
     summarized_tos = tos_summarize(tos_content)
 
     # 약관 조항에 대해 분석 수행
