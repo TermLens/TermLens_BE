@@ -29,8 +29,14 @@ def lambda_handler(event, context):
     url = event['queryStringParameters']['url']
     tos_content = md(event['body'])
 
-    print('markdownified TOS content:')
-    print(tos_content)
+    # 바이트 기준으로 길이 및 감소율 계산
+    original_length = len(event['body'].encode('utf-8'))
+    markdown_length = len(tos_content.encode('utf-8'))
+    reduction = (original_length - markdown_length) / original_length * 100
+    
+    print(f"원본 html 길이: {original_length} bytes")
+    print(f"markdown 길이: {markdown_length} bytes")
+    print(f"감소율: {reduction:.4f}%")
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
