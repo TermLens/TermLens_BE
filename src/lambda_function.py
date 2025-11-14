@@ -1,4 +1,5 @@
 import json
+from markdownify import markdownify as md
 
 from tos_summarize import tos_summarize
 from tos_evaluate import tos_evaluate
@@ -26,12 +27,15 @@ def lambda_handler(event, context):
         }
 
     url = event['queryStringParameters']['url']
-    text_html = event['body']
+    tos_content = md(event['body'])
+
+    print('markdownified TOS content:')
+    print(tos_content)
 
     # TODO: 기존 URL 기반 캐싱 로직 구현
 
     # text_html 문자열에서 중요 조항 위주로 약관 요약
-    summarized_tos = tos_summarize(text_html)
+    summarized_tos = tos_summarize(tos_content)
 
     # 약관 조항에 대해 분석 수행
     evaluation_result = tos_evaluate(summarized_tos)
