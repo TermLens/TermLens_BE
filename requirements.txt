@@ -1,2 +1,4 @@
 boto3
 markdownify
+localstack
+awscli-local[ver1]
