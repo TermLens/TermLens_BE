@@ -1,61 +1,77 @@
 import json
 import boto3
 
-def tos_evaluate(summarized_tos):
-    system_instruction=[{"text": """
-당신은 전문적인 약관 분석 AI입니다. 주어진 약관 내용 및 각 조항을 평가합니다.
-주어진 약관은 주요 조항을 위주로 요약된 내용입니다.
-JSON 양식으로, 다음의 key값을 사용합니다.
-"overall_evaluation": "A|B|C|D|E",
-"evaluation_for_each_clause": [
-    "evaluation": "good|neutral|bad",
-    "summarized_clause": "조항 요약 내용"
-]
-"overall_evaluation"은 전체 약관의 등급을 나타냅니다. A는 가장 우수한 약관, E는 가장 불리한 약관입니다.
-"evaluation_for_each_clause"는 각 조항에 대한 평가를 포함하는 리스트입니다.
-"evaluation"은 각 조항이 소비자에게 유리한지(good)/중립적인지(neutral)/불리한지(bad)를 나타냅니다.
-"summarized_clause"는 각 조항의 요약된 내용을 포함합니다.
-JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포함하지 마십시오.
-응답은 곧바로 json.loads()를 통해 파싱되기 때문에 반드시 여는 중괄호(`{`})로 시작하고 닫는 중괄호(`}`)로 끝나야 합니다.
-예시 응답:
+SYSTEM_PROMPT_TOS_EVALUATE = """
+당신은 약관 분석 전문 AI입니다. 당신의 임무는 주어진 요약된 약관 조항들을 평가하여
+소비자 관점에서 good / neutral / bad 라벨을 부여하고 전체적인 등급을 산정하는 것입니다.
+
+반드시 다음 규칙을 지키십시오:
+
+1. JSON 형식만 출력하십시오.
+2. JSON 이외의 설명, 서론, 결론, 코드블록은 절대 포함하지 마십시오.
+3. 출력 형식은 아래 스키마를 정확히 따라야 합니다:
+
 {
-    "overall_evaluation": "D",
+    "overall_evaluation": "A|B|C|D|E",
     "evaluation_for_each_clause": [
         {
-            "evaluation": "neutral",
-            "summarized_clause": "AWS 사이트 콘텐츠의 저작권은 AWS 또는 제공자에게 있으며, 관련 법률에 의해 보호됨을 명시합니다."
-        },
-        {
-            "evaluation": "neutral",
-            "summarized_clause": "AWS 상표 및 트레이드 드레스는 허가 없이 사용할 수 없으며, 타사 상표는 해당 소유자에게 있음을 명시합니다."
-        },
-        {
-            "evaluation": "bad",
-            "summarized_clause": "개인적인 사이트 이용 목적 외 상업적 재판매, 복제, 변경 등은 사전 서면 동의 없이는 금지됨을 명시하며, 이는 일반적인 내용이나 명확한 제한을 둠."
-        },
-        {
-            "evaluation": "bad",
-            "summarized_clause": "이용자의 계정 및 비밀번호 관리 책임을 명시하고, 계정 활동에 대한 책임을 이용자에게 부과합니다. 또한 AWS는 일방적으로 서비스 거절 및 계정 해지 권한을 가집니다."
+            "evaluation": "good|neutral|bad",
+            "summarized_clause": "요약된 조항 내용 그대로",
+            "reason": "라벨을 판단한 짧은 이유 (1~2 문장)"
         }
     ]
 }
-"""}]
+
+4. 평가 기준:
+- good: 이용자에게 명확한 이익·보호 장치가 존재할 때
+- neutral: 일반적인 법적·운영적 조항으로 특별히 불리함이 없을 때
+- bad: 책임 제한, 과도한 서비스 권한, 불리한 이용자 의무, 일방적 변경 가능성 등
+
+5. 전체 등급(overall_evaluation) 기준:
+- bad가 매우 많으면 E
+- bad가 많으면 D
+- neutral 위주면 C
+- good과 neutral 섞이면 B
+- good이 많고 bad 거의 없으면 A
+
+당신의 응답은 무조건 하나의 JSON 객체여야 하며, 곧바로 json.loads()로 파싱될 수 있어야 합니다.
+"""
+
+def count_score(eval_list):
+    scores = [item["evaluation"] for item in eval_list]
+    
+    bad = scores.count("bad")
+    good = scores.count("good")
+
+    if bad >= 5:
+        return "E"
+    if bad >= 3:
+        return "D"
+    if bad >= 1:
+        return "C"
+    if good >= 7:
+        return "A"
+    
+    return "B"
+
+def tos_evaluate(summarized_list):
     client = boto3.client(
-    service_name="bedrock-runtime",
-    region_name="us-west-2"
-)
+        service_name="bedrock-runtime",
+        region_name="us-west-2"
+    )
 
     model_id = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
     messages = [{
         "role": "user",
         "content": [
-            {"text": summarized_tos}
+            {"text": "다음은 요약된 약관 조항 리스트입니다:\n\n" + json.dumps(summarized_list, ensure_ascii=False)}
         ]
     }]
 
     response = client.converse(
         modelId=model_id,
-        system=system_instruction,
+        system=[{"text": SYSTEM_PROMPT_TOS_EVALUATE}],
         messages=messages,
     )
 
@@ -63,9 +79,16 @@ JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포
     print(response)
 
     text = response['output']['message']['content'][0]['text']
+
+    # JSON 파싱
     start = text.find('{')
     end = text.rfind('}') + 1
     json_text = text[start:end]
 
-    # response에서 JSON 파싱 후 반환
-    return json.loads(json_text)
+    data = json.loads(json_text)
+
+    # 전체 등급 누락 시 자동 보정
+    if not data.get("overall_evaluation"):
+        data["overall_evaluation"] = count_score(data["evaluation_for_each_clause"])
+
+    return data
