@@ -1,4 +1,5 @@
 boto3
+google-genai
 markdownify
 localstack
 awscli-local[ver1]
