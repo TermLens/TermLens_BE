@@ -1,2 +1,5 @@
 /venv/
 src/__pycache__/
+build/
+test-package.zip
+output.json
