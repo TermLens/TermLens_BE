@@ -1,6 +1,6 @@
 from llm_client import LLMClient
 
-def tos_summarize(tos_content, client: LLMClient) -> str:
+def tos_summarize(tos_content: str, client: LLMClient) -> str:
     system_instruction="""
 당신은 약관 분석 전문가입니다.
 주어진 텍스트에서 주요 약관 내용을 요약합니다.
