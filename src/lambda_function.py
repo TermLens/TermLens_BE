@@ -38,7 +38,8 @@ def lambda_handler(event, context):
     print(f"markdown 길이: {markdown_length} bytes")
     print(f"감소율: {reduction:.2f}%")
 
-    # TODO: 기존 URL 기반 캐싱 로직 구현
+    # url에서 쿼리 파라미터(?), 해시(#) 제거
+    url = url.split('?')[0].split('#')[0]
 
     # tos_content 문자열에서 중요 조항 위주로 약관 요약
     summarized_tos = tos_summarize(tos_content)
