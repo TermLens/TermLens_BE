@@ -1,8 +1,8 @@
 import json
-import boto3
+from llm_client import LLMClient
 
-def tos_evaluate(summarized_tos):
-    system_instruction=[{"text": """
+def tos_evaluate(summarized_tos, client: LLMClient) -> dict:
+    system_instruction="""
 당신은 전문적인 약관 분석 AI입니다. 주어진 약관 내용 및 각 조항을 평가합니다.
 주어진 약관은 주요 조항을 위주로 요약된 내용입니다.
 JSON 양식으로, 다음의 key값을 사용합니다.
@@ -39,33 +39,16 @@ JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포
         }
     ]
 }
-"""}]
-    client = boto3.client(
-    service_name="bedrock-runtime",
-    region_name="us-west-2"
-)
+"""
 
-    model_id = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    messages = [{
-        "role": "user",
-        "content": [
-            {"text": summarized_tos}
-        ]
-    }]
-
-    response = client.converse(
-        modelId=model_id,
-        system=system_instruction,
-        messages=messages,
-    )
+    response = client.generate_response(system_instruction, summarized_tos)
 
     print("TOS Evaluation Response:")
     print(response)
 
-    text = response['output']['message']['content'][0]['text']
-    start = text.find('{')
-    end = text.rfind('}') + 1
-    json_text = text[start:end]
+    start = response.find('{')
+    end = response.rfind('}') + 1
+    json_text = response[start:end]
 
     # response에서 JSON 파싱 후 반환
     return json.loads(json_text)

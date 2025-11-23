@@ -3,6 +3,7 @@ from markdownify import markdownify as md
 
 from tos_summarize import tos_summarize
 from tos_evaluate import tos_evaluate
+from llm_client import LLMClient
 
 def lambda_handler(event, context):
     # url이 없거나 빈 문자열인 경우
@@ -41,11 +42,13 @@ def lambda_handler(event, context):
     # url에서 쿼리 파라미터(?), 해시(#) 제거
     url = url.split('?')[0].split('#')[0]
 
+    client = LLMClient()
+
     # tos_content 문자열에서 중요 조항 위주로 약관 요약
-    summarized_tos = tos_summarize(tos_content)
+    summarized_tos = tos_summarize(tos_content, client)
 
     # 약관 조항에 대해 분석 수행
-    evaluation_result = tos_evaluate(summarized_tos)
+    evaluation_result = tos_evaluate(summarized_tos, client)
 
     return {
         'statusCode': 200,
