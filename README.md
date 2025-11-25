@@ -21,7 +21,17 @@ source ~/.bashrc
 localstack --version
 awslocal --version
 ```
+
 wsl 환경에서 `pip install` 명령을 전역으로 쓸 수 없어 pipx를 사용합니다. 전역으로 localstack 및 awslocal을 설치하여 사용 가능한 경우 pipx의 설치가 필요하지 않습니다.
+
+이후 아래 명령을 통해 가짜 aws credentials를 설정합니다. s3 및 DynamoDB 사용에 필요합니다.
+```bash
+aws configure
+AWS Access Key ID [None]: test
+AWS Secret Access Key [None]: test
+Default region name [None]: us-east-1
+Default output format [None]: json
+```
 ## 로컬 테스트
 **docker가 실행된 상태에서** `localstack start` 명령으로 LocalStack을 구동합니다. 이후 터미널에 `Ready`가 나타나면 다른 터미널 창을 열고, 프로젝트 디렉토리에서 아래 작업을 수행합니다.
 
@@ -39,7 +49,7 @@ ARM 환경에서는 `pip install...` 명령 대신 아래의 명령을 사용해
 docker run --platform linux/amd64 --rm -v "$(pwd)":/var/task --entrypoint "" public.ecr.aws/lambda/python:3.12 /bin/sh -c "pip install -r requirements.txt -t build/ --upgrade && cp src/*.py build/ && cd build && dnf install -y zip && zip -r ../test-package.zip . && cd .."
 ```
 
-그 다음 아래의 명령을 통해 람다 함수를 생성합니다.
+그 다음 아래의 명령을 통해 람다 함수, S3 버킷, DynamoDB 테이블을 생성합니다.
 ```bash
 awslocal lambda create-function \
     --function-name analyzeTermsOfServices \
@@ -49,6 +59,15 @@ awslocal lambda create-function \
     --handler lambda_function.lambda_handler \
     --role arn:aws:iam::000000000000:role/lambda-role \
     --environment Variables='{GEMINI_API_KEY=여기에_KEY값을_넣어주세요,LLM_PROVIDER=GEMINI}'
+
+awslocal s3api create-bucket --bucket inha-capstone-20-tos-content
+
+awslocal dynamodb create-table \
+    --table-name inha-capstone-20-tos-analysis \
+    --key-schema AttributeName=url,KeyType=HASH \
+    --attribute-definitions AttributeName=url,AttributeType=S \
+    --billing-mode PAY_PER_REQUEST \
+    --region us-east-1
 ```
 
 생성된 함수의 호출은 다음과 같이 할 수 있습니다.
