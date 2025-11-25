@@ -1,5 +1,4 @@
 boto3
 google-genai
 trafilatura
-kss
-spacy
+
