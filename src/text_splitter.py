@@ -62,7 +62,9 @@ def split_sentences_block(block: str, client: LLMClient) -> List[str]:
     """
     LLM을 사용해 약관 블록 텍스트를 문장 단위로 분리한다.
     """
+    print(f"원본 블록 길이: {len(block)}")
     block = _normalize_block(block)
+    print(f"정규화된 블록 길이: {len(block)}")
     if not block:
         return []
 

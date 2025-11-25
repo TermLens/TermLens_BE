@@ -43,12 +43,10 @@ def lambda_handler(event, context):
 
     # 바이트 기준으로 길이 및 감소율 계산
     original_length = len(event['body'].encode('utf-8'))
-    markdown_length = len(tos_content.encode('utf-8'))
-    reduction = (original_length - markdown_length) / original_length * 100
+    processed_length = len(tos_content.encode('utf-8'))
     
     print(f"원본 html 길이: {original_length} bytes")
-    print(f"markdown 길이: {markdown_length} bytes")
-    print(f"감소율: {reduction:.2f}%")
+    print(f"trafilatura 전처리 후 길이: {processed_length} bytes")
 
     # url에서 쿼리 파라미터(?), 해시(#) 제거
     url = url.split('?')[0].split('#')[0]
@@ -92,6 +90,7 @@ def lambda_handler(event, context):
     # 1) 문장 단위 분할
     sentences = split_sentences_block(tos_content, client)
     print(f"문장 분할 개수: {len(sentences)}")
+    print(f"문장들 길이 합: {sum(len(s) for s in sentences)}")
 
     # 2) 중요도 점수화
     scored_sentences = score_sentence_importance(sentences, client)
@@ -99,9 +98,11 @@ def lambda_handler(event, context):
         item for item in scored_sentences if item.get("importance_score", 0) >= 3
     ]
     print(f"중요도 3 이상 문장 수: {len(important_sentences)}")
+    print(f"중요도 3 이상 문장들 길이 합: {sum(len(item.get('sentence', '')) for item in important_sentences)}")
 
     # 3) 카테고리 분류
     categorized = categorize_sentences(important_sentences, client)
+    print(f"OTHER 카테고리 문장 수: {len([item for item in categorized if item.get('category') == 'OTHER'])}")
 
     # 4) 카테고리별 요약
     category_summaries = summarize_by_category(categorized, client)
@@ -119,12 +120,7 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'body': json.dumps({
-            "url": url,
-            "stats": {
-                "total_sentences": len(sentences),
-                "kept_sentences": len(important_sentences),
-                "reduction_rate_percent": reduction
-            },
-            "category_results": evaluation_result
+            "overall_evaluation": evaluation_result.get("overall_evaluation"),
+            "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
         }, ensure_ascii=False)
     }
