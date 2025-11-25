@@ -1,51 +1,38 @@
-import re
+import json
 from typing import List
-
-import kss
-import spacy
-from spacy.lang.en import English
-
-_nlp_en = None
+from llm_client import LLMClient
 
 
-def _get_english_model():
+def _extract_json_array(text: str) -> List[str]:
+    start = text.find("[")
+    end = text.rfind("]")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError("문장 배열 JSON을 찾지 못했습니다.")
+    return json.loads(text[start : end + 1])
+
+
+def split_sentences_block(block: str, client: LLMClient) -> List[str]:
     """
-    Load an English sentence tokenizer. Falls back to a lightweight sentencizer
-    if the full en_core_web_sm model is unavailable.
-    """
-    global _nlp_en
-    if _nlp_en is not None:
-        return _nlp_en
-
-    try:
-        _nlp_en = spacy.load("en_core_web_sm")
-    except Exception:
-        # Fallback to a minimal pipeline to avoid import errors in environments
-        # without the prebuilt model.
-        _nlp_en = English()
-        if "sentencizer" not in _nlp_en.pipe_names:
-            _nlp_en.add_pipe("sentencizer")
-
-    return _nlp_en
-
-
-def is_korean(text: str) -> bool:
-    hangul_cnt = len(re.findall(r"[가-힣]", text))
-    return hangul_cnt / max(len(text), 1) > 0.3
-
-
-def split_sentences_block(block: str) -> List[str]:
-    """
-    Split a block of text into sentences using KSS for Korean and spaCy for English.
+    LLM을 사용해 약관 블록 텍스트를 문장 단위로 분리한다.
     """
     block = block.strip()
     if not block:
         return []
 
-    if is_korean(block):
-        sents = kss.split_sentences(block)
-        return [s.strip() for s in sents if s.strip()]
+    system_instruction = """
+당신은 텍스트를 문장 단위로 나누는 도우미입니다.
+- 한국어/영어 혼합 가능
+- 문장 순서를 유지하고, 요약/병합/삭제하지 않습니다.
+- 문장 끝의 마침표/기호를 유지합니다.
+- 공백/줄바꿈은 다듬되 내용은 바꾸지 않습니다.
+출력은 반드시 JSON 배열 형식으로만 작성합니다.
+"""
 
-    nlp_en = _get_english_model()
-    doc = nlp_en(block)
-    return [s.text.strip() for s in doc.sents if s.text.strip()]
+    response = client.generate_response(system_instruction, block)
+
+    sentences = _extract_json_array(response)
+    return [str(s).strip() for s in sentences if str(s).strip()]
+
+
+sentences = split_sentences_block(tos_content, client)
+print(f"문장 분할 개수: {len(sentences)}")

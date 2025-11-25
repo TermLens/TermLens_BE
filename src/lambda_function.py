@@ -90,7 +90,7 @@ def lambda_handler(event, context):
     client = LLMClient()
 
     # 1) 문장 단위 분할
-    sentences = split_sentences_block(tos_content)
+    sentences = split_sentences_block(tos_content, client)
     print(f"문장 분할 개수: {len(sentences)}")
 
     # 2) 중요도 점수화
