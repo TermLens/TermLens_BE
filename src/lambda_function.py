@@ -1,10 +1,12 @@
 import json
+from trafilatura import extract
 import boto3
-from markdownify import markdownify as md
 
-from tos_summarize import tos_summarize
-from tos_evaluate import tos_evaluate
 from llm_client import LLMClient
+from text_splitter import split_sentences_block
+from tos_evaluate import evaluate_category_summaries
+from tos_processing import categorize_sentences, score_sentence_importance
+from tos_summarize import summarize_by_category
 
 def lambda_handler(event, context):
     # url이 없거나 빈 문자열인 경우
@@ -29,7 +31,15 @@ def lambda_handler(event, context):
         }
 
     url = event['queryStringParameters']['url']
-    tos_content = md(event['body'])
+    tos_content = extract(event['body'], output_format='html')
+
+    if not tos_content:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({
+                'error': '약관 전처리에 실패했습니다.'
+            }, ensure_ascii=False)
+        }
 
     # 바이트 기준으로 길이 및 감소율 계산
     original_length = len(event['body'].encode('utf-8'))
@@ -79,11 +89,25 @@ def lambda_handler(event, context):
 
     client = LLMClient()
 
-    # tos_content 문자열에서 중요 조항 위주로 약관 요약
-    summarized_tos = tos_summarize(tos_content, client)
+    # 1) 문장 단위 분할
+    sentences = split_sentences_block(tos_content)
+    print(f"문장 분할 개수: {len(sentences)}")
 
-    # 약관 조항에 대해 분석 수행
-    evaluation_result = tos_evaluate(summarized_tos, client)
+    # 2) 중요도 점수화
+    scored_sentences = score_sentence_importance(sentences, client)
+    important_sentences = [
+        item for item in scored_sentences if item.get("importance_score", 0) >= 3
+    ]
+    print(f"중요도 3 이상 문장 수: {len(important_sentences)}")
+
+    # 3) 카테고리 분류
+    categorized = categorize_sentences(important_sentences, client)
+
+    # 4) 카테고리별 요약
+    category_summaries = summarize_by_category(categorized, client)
+
+    # 5) 요약 평가
+    evaluation_result = evaluate_category_summaries(category_summaries, client)
 
     # DynamoDB에 분석 결과 저장
     table.put_item(Item={
@@ -95,7 +119,12 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'body': json.dumps({
-            "overall_evaluation": evaluation_result.get("overall_evaluation"),
-            "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
+            "url": url,
+            "stats": {
+                "total_sentences": len(sentences),
+                "kept_sentences": len(important_sentences),
+                "reduction_rate_percent": reduction
+            },
+            "category_results": evaluation_result
         }, ensure_ascii=False)
     }

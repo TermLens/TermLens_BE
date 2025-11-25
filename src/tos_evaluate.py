@@ -1,54 +1,92 @@
 import json
+from typing import Dict, List
+
 from llm_client import LLMClient
 
-def tos_evaluate(summarized_tos, client: LLMClient) -> dict:
-    system_instruction="""
-당신은 전문적인 약관 분석 AI입니다. 주어진 약관 내용 및 각 조항을 평가합니다.
-주어진 약관은 주요 조항을 위주로 요약된 내용입니다.
-JSON 양식으로, 다음의 key값을 사용합니다.
-"overall_evaluation": "A|B|C|D|E",
-"evaluation_for_each_clause": [
-    "evaluation": "good|neutral|bad",
-    "summarized_clause": "조항 요약 내용"
-]
-"overall_evaluation"은 전체 약관의 등급을 나타냅니다. A는 가장 우수한 약관, E는 가장 불리한 약관입니다.
-"evaluation_for_each_clause"는 각 조항에 대한 평가를 포함하는 리스트입니다.
-"evaluation"은 각 조항이 소비자에게 유리한지(good)/중립적인지(neutral)/불리한지(bad)를 나타냅니다.
-"summarized_clause"는 각 조항의 요약된 내용을 포함합니다.
-JSON 형식 이외에 서론이나 결론, 코드 블럭 따위는 절대로 포함하지 마십시오.
-응답은 곧바로 json.loads()를 통해 파싱되기 때문에 반드시 여는 중괄호(`{`})로 시작하고 닫는 중괄호(`}`)로 끝나야 합니다.
-예시 응답:
+
+def _extract_json_fragment(text: str):
+    obj_start = text.find("{")
+    arr_start = text.find("[")
+    starts = [i for i in [obj_start, arr_start] if i != -1]
+    if not starts:
+        raise ValueError("JSON 시작 구분자를 찾지 못했습니다.")
+
+    start = min(starts)
+    end_char = "}" if start == obj_start else "]"
+    end = text.rfind(end_char)
+    if end == -1:
+        raise ValueError("JSON 종료 구분자를 찾지 못했습니다.")
+
+    return json.loads(text[start : end + 1])
+
+
+def evaluate_summary(summary: str, client: LLMClient) -> Dict:
+    system_instruction = """
+[시스템 지시]
+당신은 온라인 서비스 이용약관이 사용자에게 얼마나 유리한지/불리한지를 평가하는 전문가입니다.
+입력으로 하나의 요약된 조항 설명(한국어)을 받습니다.
+이 요약은 이미 여러 원문 조항을 이해하기 쉽게 풀어쓴 것입니다.
+
+목표:
+1) 이 조항이 일반 사용자에게 "좋은지(good), 중립적인지(neutral), 나쁜지(bad)"를 분류합니다.
+2) 공정성, 위험, 투명성, 통제 가능성 관점에서 1~5점 점수를 매깁니다.
+3) 왜 그렇게 판단했는지 간단한 근거를 한국어로 설명합니다.
+
+레이블 정의:
+- good: 사용자 권리/보호를 강화하거나 회사/사용자 간 균형, 뚜렷한 이점, 중간 수준
+- bad: 권리/프라이버시/금전적 이익을 과도하게 제한하거나 회사 쪽으로 심하게 기울어진 조항, 높은 위험
+- 애매하면 neutral
+
+점수:
+- fairness_score: 1=매우 불공정, 3=보통, 5=매우 공정
+- risk_score: 1=위험 거의 없음, 3=보통, 5=매우 높은 위험
+- transparency_score: 1=매우 불명확, 3=보통, 5=매우 명확
+- control_score: 1=통제 불가, 3=일부 통제, 5=충분한 통제
+
+최종 label을 정할 때:
+- fairness_score가 낮고 risk_score가 높으면 bad
+- fairness_score가 높고 risk_score가 낮으며 control_score가 높으면 good
+- 나머지는 neutral, 애매하면 neutral
+
+출력은 반드시 아래 JSON 형식만 사용:
 {
-    "overall_evaluation": "D",
-    "evaluation_for_each_clause": [
-        {
-            "evaluation": "neutral",
-            "summarized_clause": "AWS 사이트 콘텐츠의 저작권은 AWS 또는 제공자에게 있으며, 관련 법률에 의해 보호됨을 명시합니다."
-        },
-        {
-            "evaluation": "neutral",
-            "summarized_clause": "AWS 상표 및 트레이드 드레스는 허가 없이 사용할 수 없으며, 타사 상표는 해당 소유자에게 있음을 명시합니다."
-        },
-        {
-            "evaluation": "bad",
-            "summarized_clause": "개인적인 사이트 이용 목적 외 상업적 재판매, 복제, 변경 등은 사전 서면 동의 없이는 금지됨을 명시하며, 이는 일반적인 내용이나 명확한 제한을 둠."
-        },
-        {
-            "evaluation": "bad",
-            "summarized_clause": "이용자의 계정 및 비밀번호 관리 책임을 명시하고, 계정 활동에 대한 책임을 이용자에게 부과합니다. 또한 AWS는 일방적으로 서비스 거절 및 계정 해지 권한을 가집니다."
-        }
-    ]
+  "label": "good" | "neutral" | "bad",
+  "fairness_score": 1 | 2 | 3 | 4 | 5,
+  "risk_score": 1 | 2 | 3 | 4 | 5,
+  "transparency_score": 1 | 2 | 3 | 4 | 5,
+  "control_score": 1 | 2 | 3 | 4 | 5,
+  "reasoning": "..."
 }
 """
 
-    response = client.generate_response(system_instruction, summarized_tos)
+    message = f"[입력 요약 조항]\n{summary}"
+    response = client.generate_response(system_instruction, message)
 
     print("TOS Evaluation Response:")
     print(response)
 
-    start = response.find('{')
-    end = response.rfind('}') + 1
-    json_text = response[start:end]
+    return _extract_json_fragment(response)
 
-    # response에서 JSON 파싱 후 반환
-    return json.loads(json_text)
+
+def evaluate_category_summaries(
+    category_summaries: List[Dict], client: LLMClient
+) -> List[Dict]:
+    """
+    카테고리별 요약에 대해 good/neutral/bad 평가를 수행한다.
+    """
+    if not category_summaries:
+        return []
+
+    results = []
+    for item in category_summaries:
+        evaluation = evaluate_summary(item.get("summary", ""), client)
+        results.append(
+            {
+                "category": item.get("category"),
+                "summary": item.get("summary"),
+                "sentences": item.get("sentences", []),
+                "evaluation": evaluation,
+            }
+        )
+
+    return results
