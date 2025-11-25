@@ -32,7 +32,3 @@ def split_sentences_block(block: str, client: LLMClient) -> List[str]:
 
     sentences = _extract_json_array(response)
     return [str(s).strip() for s in sentences if str(s).strip()]
-
-
-sentences = split_sentences_block(tos_content, client)
-print(f"문장 분할 개수: {len(sentences)}")
