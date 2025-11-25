@@ -84,9 +84,6 @@ def evaluate_summary(summary: str, client: LLMClient) -> Dict:
     message = f"[입력 요약 조항]\n{summary}"
     response = client.generate_response(system_instruction, message)
 
-    print("TOS Evaluation Response:")
-    print(response)
-
     return _extract_json_fragment(response)
 
 
