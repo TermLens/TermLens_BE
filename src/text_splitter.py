@@ -80,6 +80,12 @@ def split_sentences_block(block: str, client: LLMClient) -> List[str]:
 """
 
     response = client.generate_response(system_instruction, block)
+    print("LLM 분리 전, 정규화된 블록:")
+    print(f"{block}")
+    print("LLM 분리 직후, 응답")
+    print(f"{response}")
 
     sentences = _extract_json_array(response)
+    print("json_array 파싱 후, 문장들:")
+    print(f"{sentences}")
     return [str(s).strip() for s in sentences if str(s).strip()]
