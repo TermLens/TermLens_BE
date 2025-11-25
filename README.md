@@ -21,7 +21,8 @@ source ~/.bashrc
 localstack --version
 awslocal --version
 ```
-wsl 환경에서 `pip install` 명령을 전역으로 쓸 수 없어 pipx를 사용합니다.
+
+wsl 환경에서 `pip install` 명령을 전역으로 쓸 수 없어 pipx를 사용합니다. 전역으로 localstack 및 awslocal을 설치하여 사용 가능한 경우 pipx의 설치가 필요하지 않습니다.
 
 이후 아래 명령을 통해 가짜 aws credentials를 설정합니다. s3 및 DynamoDB 사용에 필요합니다.
 ```bash
@@ -43,6 +44,11 @@ zip -r ../test-package.zip .
 cd ..
 ```
 
+ARM 환경에서는 `pip install...` 명령 대신 아래의 명령을 사용해주세요. LocalStack 및 AWS Lambda 환경에서는 amd64(x86-64)을 기반으로 작동하나, ARM 기반 기기에서 해당 명령으로 설치하게 되면 ARM용 바이너리를 받아와 LocalStack에서 실행하지 못합니다. 아래 명령으로 생성된 `build/` 디렉토리 및 `test-package.zip` 파일은 삭제 시 root 권한이 필요합니다.
+```bash
+docker run --platform linux/amd64 --rm -v "$(pwd)":/var/task --entrypoint "" public.ecr.aws/lambda/python:3.12 /bin/sh -c "pip install -r requirements.txt -t build/ --upgrade && cp src/*.py build/ && cd build && dnf install -y zip && zip -r ../test-package.zip . && cd .."
+```
+
 그 다음 아래의 명령을 통해 람다 함수, S3 버킷, DynamoDB 테이블을 생성합니다.
 ```bash
 awslocal lambda create-function \
@@ -52,7 +58,7 @@ awslocal lambda create-function \
     --zip-file fileb://test-package.zip \
     --handler lambda_function.lambda_handler \
     --role arn:aws:iam::000000000000:role/lambda-role \
-    --environment Variables="{GEMINI_API_KEY=여기에_KEY값을_넣어주세요,LLM_PROVIDER=GEMINI}"
+    --environment Variables='{GEMINI_API_KEY=여기에_KEY값을_넣어주세요,LLM_PROVIDER=GEMINI}'
 
 awslocal s3api create-bucket --bucket inha-capstone-20-tos-content
 
