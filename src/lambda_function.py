@@ -44,7 +44,7 @@ def lambda_handler(event, context):
     url = url.split('?')[0].split('#')[0]
 
     s3 = boto3.client("s3")
-    bucket = 'inha-capstone-20-tos-content-caching'
+    bucket = 'inha-capstone-20-tos-content'
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('inha-capstone-20-tos-analysis')
     key = url
