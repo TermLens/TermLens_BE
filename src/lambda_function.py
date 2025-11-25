@@ -1,5 +1,6 @@
 import json
 from trafilatura import extract
+import boto3
 
 from llm_client import LLMClient
 from text_splitter import split_sentences_block
@@ -49,7 +50,42 @@ def lambda_handler(event, context):
     print(f"markdown 길이: {markdown_length} bytes")
     print(f"감소율: {reduction:.2f}%")
 
-    # TODO: 기존 URL 기반 캐싱 로직 구현
+    # url에서 쿼리 파라미터(?), 해시(#) 제거
+    url = url.split('?')[0].split('#')[0]
+
+    s3 = boto3.client("s3")
+    bucket = 'inha-capstone-20-tos-content'
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('inha-capstone-20-tos-analysis')
+    key = url
+
+    # try: S3에서 해당 url을 key로 갖는 객체 가져오기
+    try:
+        response = s3.get_object(Bucket=bucket, Key=url)
+        saved_tos_content = response['Body'].read().decode('utf-8')
+
+        # 기존 tos_content와 비교
+        if saved_tos_content == tos_content:
+            # 동일하면 DynamoDB에서 이전 분석 결과를 가져와 return
+            db_response = table.get_item(Key={'url': url})
+            if 'Item' in db_response:
+                evaluation_result = db_response['Item']
+                print("캐시 존재, 이전 분석 결과 반환")
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({
+                        "overall_evaluation": evaluation_result.get("overall_evaluation"),
+                        "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
+                    }, ensure_ascii=False)
+                }
+        
+        # 내용이 다르면 S3 업데이트
+        s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
+        print("캐시 내용 불일치, 새로 저장")
+    # except: 없는 경우 현재 url을 key로 tos_content 저장
+    except s3.exceptions.NoSuchKey:
+        s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
+        print("캐시 없음, 새로 저장")
 
     client = LLMClient()
 
@@ -72,6 +108,13 @@ def lambda_handler(event, context):
 
     # 5) 요약 평가
     evaluation_result = evaluate_category_summaries(category_summaries, client)
+
+    # DynamoDB에 분석 결과 저장
+    table.put_item(Item={
+        'url': url,
+        'overall_evaluation': evaluation_result.get("overall_evaluation"),
+        'evaluation_for_each_clause': evaluation_result.get("evaluation_for_each_clause")
+    })
 
     return {
         'statusCode': 200,
