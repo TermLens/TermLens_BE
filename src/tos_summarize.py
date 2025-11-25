@@ -1,15 +1,47 @@
+from collections import defaultdict
+from typing import Dict, List
+
 from llm_client import LLMClient
 
-def tos_summarize(tos_content: str, client: LLMClient) -> str:
-    system_instruction="""
+
+def summarize_by_category(categorized_sentences: List[Dict], client: LLMClient) -> List[Dict]:
+    """
+    중요 문장을 카테고리별로 묶어 요약합니다.
+    """
+    if not categorized_sentences:
+        return []
+
+    grouped = defaultdict(list)
+    for item in categorized_sentences:
+        grouped[item["category"]].append(item)
+
+    system_instruction = """
 당신은 약관 분석 전문가입니다.
-주어진 텍스트에서 주요 약관 내용을 요약합니다.
-한국어로 응답합니다.
+각 카테고리별 중요 문장을 2~4문장 내외로 간결하게 요약하세요.
+- 한국어로 작성
+- 사용자 권리/의무/리스크 등 핵심 포인트 중심
+- 중요도 점수는 참고만 하고 결과 문장에는 숫자를 넣지 않습니다.
 """
 
-    response = client.generate_response(system_instruction, tos_content)
+    summaries = []
+    for category, items in grouped.items():
+        message_lines = [
+            f"카테고리: {category}",
+            "중요 문장 목록:",
+        ]
+        for idx, entry in enumerate(items, start=1):
+            message_lines.append(
+                f"{idx}. 중요도 {entry.get('importance_score')}: {entry.get('sentence')}"
+            )
 
-    print("TOS Summarization Response:")
-    print(response)
+        message = "\n".join(message_lines)
+        summary = client.generate_response(system_instruction, message).strip()
+        summaries.append(
+            {
+                "category": category,
+                "summary": summary,
+                "sentences": items,
+            }
+        )
 
-    return response
+    return summaries
