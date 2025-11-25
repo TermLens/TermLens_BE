@@ -20,6 +20,28 @@ def _extract_json_fragment(text: str):
     return json.loads(text[start : end + 1])
 
 
+def _calculate_overall_evaluation(labels: List[str]) -> str:
+    """
+    good/neutral/bad 라벨을 점수화해 최종 등급(A~E)을 계산한다.
+    점수 매핑: good=+1, neutral=0, bad=-1
+    """
+    if not labels:
+        return "E"
+
+    score_map = {"good": 1, "neutral": 0, "bad": -1}
+    avg_score = sum(score_map.get(label, 0) for label in labels) / len(labels)
+
+    if avg_score >= 0.8:
+        return "A"  # 거의 대부분이 사용자 친화적
+    if avg_score >= 0.5:
+        return "B"  # good 우세, bad 적음
+    if avg_score >= 0.0:
+        return "C"  # 중립적이거나 균형
+    if avg_score >= -0.5:
+        return "D"  # bad가 다소 많음
+    return "E"  # bad가 대부분
+
+
 def evaluate_summary(summary: str, client: LLMClient) -> Dict:
     system_instruction = """
 [시스템 지시]
@@ -70,23 +92,30 @@ def evaluate_summary(summary: str, client: LLMClient) -> Dict:
 
 def evaluate_category_summaries(
     category_summaries: List[Dict], client: LLMClient
-) -> List[Dict]:
+) -> Dict:
     """
-    카테고리별 요약에 대해 good/neutral/bad 평가를 수행한다.
+    카테고리별 요약을 평가하고 전체 약관 등급(A~E)을 계산한다.
     """
     if not category_summaries:
-        return []
+        return {"overall_evaluation": "E", "evaluation_for_each_clause": []}
 
-    results = []
+    labels = []
+    clause_results = []
     for item in category_summaries:
         evaluation = evaluate_summary(item.get("summary", ""), client)
-        results.append(
+        label = evaluation.get("label", "neutral")
+        labels.append(label)
+
+        clause_results.append(
             {
-                "category": item.get("category"),
-                "summary": item.get("summary"),
-                "sentences": item.get("sentences", []),
-                "evaluation": evaluation,
+                "evaluation": label,
+                "summarized_clause": item.get("summary", ""),
             }
         )
 
-    return results
+    overall = _calculate_overall_evaluation(labels)
+
+    return {
+        "overall_evaluation": overall,
+        "evaluation_for_each_clause": clause_results,
+    }
