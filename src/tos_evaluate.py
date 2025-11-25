@@ -104,12 +104,24 @@ def evaluate_category_summaries(
     for item in category_summaries:
         evaluation = evaluate_summary(item.get("summary", ""), client)
         label = evaluation.get("label", "neutral")
+        fairness_score = evaluation.get("fairness_score", -1)
+        risk_score = evaluation.get("risk_score", -1)
+        transparency_score = evaluation.get("transparency_score", -1)
+        control_score = evaluation.get("control_score", -1)
+        reasoning = evaluation.get("reasoning", "error")
+        category = item.get("category", "UNKNOWN")
         labels.append(label)
 
         clause_results.append(
             {
                 "evaluation": label,
                 "summarized_clause": item.get("summary", ""),
+                "category": category,
+                "fairness_score": fairness_score,
+                "risk_score": risk_score,
+                "transparency_score": transparency_score,
+                "control_score": control_score,
+                "reasoning": reasoning,
             }
         )
 
