@@ -102,7 +102,14 @@ def lambda_handler(event, context):
 
     # 3) 카테고리 분류
     categorized = categorize_sentences(important_sentences, client)
-    print(f"OTHER 카테고리 문장 수: {len([item for item in categorized if item.get('category') == 'OTHER'])}")
+    # 카테고리별 문장 수 계산 후 출력 (디버깅 용도)
+    category_counts = {}
+    for item in categorized:
+        category = item.get("category", "UNKNOWN")
+        category_counts[category] = category_counts.get(category, 0) + 1
+    print("카테고리별 문장 수:")
+    for category, count in category_counts.items():
+        print(f"{category}: {count}")
 
     # 4) 카테고리별 요약
     category_summaries = summarize_by_category(categorized, client)
