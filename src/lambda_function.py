@@ -85,7 +85,7 @@ def lambda_handler(event, context):
         s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
         print("캐시 없음, 새로 저장")
 
-    client = LLMClient()
+    client = LLMClient(temperature=0)
 
     # 1) 문장 단위 분할
     sentences = split_sentences_block(tos_content, client)
