@@ -156,6 +156,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
     if not scored_sentences:
         return []
 
+    batch_size = 10
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 미리 정의된 category로 분류하는 전문가입니다.
 
@@ -247,28 +248,37 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 """
 
 
-    message = json.dumps(
-        {"sentences": scored_sentences},
-        ensure_ascii=False,
-    )
+    sentence_batches = [
+        scored_sentences[i : i + batch_size]
+        for i in range(0, len(scored_sentences), batch_size)
+    ]
 
-    response = client.generate_response(system_instruction, message)
-    parsed = _extract_json_fragment(response)
+    def _categorize_batch(batch: List[Dict]) -> List[Dict]:
+        message = json.dumps({"sentences": batch}, ensure_ascii=False)
+        response = client.generate_response(system_instruction, message)
+        parsed = _extract_json_fragment(response)
 
-    results = []
-    for item in parsed:
-        sentence = str(item.get("sentence", "")).strip()
-        try:
-            score = int(item.get("importance_score", 0))
-        except Exception:
-            score = 0
-        results.append(
-            {
-                "input_index": item.get("input_index"),
-                "sentence": sentence,
-                "importance_score": score,
-                "category": item.get("category", "OTHER"),
-            }
-        )
+        batch_results = []
+        for item in parsed:
+            sentence = str(item.get("sentence", "")).strip()
+            try:
+                score = int(item.get("importance_score", 0))
+            except Exception:
+                score = 0
+            batch_results.append(
+                {
+                    "input_index": item.get("input_index"),
+                    "sentence": sentence,
+                    "importance_score": score,
+                    "category": item.get("category", "OTHER"),
+                }
+            )
+        return batch_results
 
-    return sorted(results, key=lambda x: x.get("input_index", 0))
+    all_results: List[Dict] = []
+    with ThreadPoolExecutor(max_workers=len(sentence_batches)) as executor:
+        futures = [executor.submit(_categorize_batch, batch) for batch in sentence_batches]
+        for future in as_completed(futures):
+            all_results.extend(future.result())
+
+    return sorted(all_results, key=lambda x: x.get("input_index", 0))
