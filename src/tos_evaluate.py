@@ -49,35 +49,40 @@ def evaluate_summary(summary: str, client: LLMClient) -> Dict:
 입력으로 하나의 요약된 조항 설명(한국어)을 받습니다.
 이 요약은 이미 여러 원문 조항을 이해하기 쉽게 풀어쓴 것입니다.
 
-목표:
-1) 이 조항이 일반 사용자에게 "좋은지(good), 중립적인지(neutral), 나쁜지(bad)"를 분류합니다.
-2) 공정성, 위험, 투명성, 통제 가능성 관점에서 1~5점 점수를 매깁니다.
+[입력 형식]
+- 사용자 메시지에는 "[입력 요약 조항]\\n<요약 텍스트>" 형태로 한 개의 요약 문단이 주어집니다.
+
+[목표]
+1) 이 요약 조항이 일반 사용자에게 전반적으로 "good / neutral / bad" 중 어디에 해당하는지 분류합니다.
+2) 공정성(fairness), 사용자 위험(risk), 투명성(transparency), 통제 가능성(control) 관점에서 각각 1~5점 점수를 매깁니다.
 3) 왜 그렇게 판단했는지 간단한 근거를 한국어로 설명합니다.
 
-레이블 정의:
+[레이블 정의]
 - good: 사용자 권리/보호를 강화하거나 회사/사용자 간 균형, 뚜렷한 이점, 중간 수준
 - bad: 권리/프라이버시/금전적 이익을 과도하게 제한하거나 회사 쪽으로 심하게 기울어진 조항, 높은 위험
 - 애매하면 neutral
 
-점수:
+[점수 스케일 정의] (각 1~5점, 정수)
 - fairness_score: 1=매우 불공정, 3=보통, 5=매우 공정
 - risk_score: 1=위험 거의 없음, 3=보통, 5=매우 높은 위험
 - transparency_score: 1=매우 불명확, 3=보통, 5=매우 명확
 - control_score: 1=통제 불가, 3=일부 통제, 5=충분한 통제
 
-최종 label을 정할 때:
+[레이블 결정 규칙]
 - fairness_score가 낮고 risk_score가 높으면 bad
 - fairness_score가 높고 risk_score가 낮으며 control_score가 높으면 good
 - 나머지는 neutral, 애매하면 neutral
 
-출력은 반드시 아래 JSON 형식만 사용:
+[출력 형식]
+출력은 반드시 아래 JSON 객체 하나만 포함해야 합니다. (추가 텍스트 금지)
+
 {
   "label": "good" | "neutral" | "bad",
   "fairness_score": 1 | 2 | 3 | 4 | 5,
   "risk_score": 1 | 2 | 3 | 4 | 5,
   "transparency_score": 1 | 2 | 3 | 4 | 5,
   "control_score": 1 | 2 | 3 | 4 | 5,
-  "reasoning": "..."
+  "reasoning": "위 label을 선택한 근거를 한국어로 간단히 설명"
 }
 """
 
