@@ -9,6 +9,7 @@ import os
 from google import genai
 from google.genai import types
 import boto3
+from botocore.config import Config
 
 class LLMClient:
     
@@ -26,7 +27,8 @@ class LLMClient:
             # AWS Lambda 환경 - Bedrock Claude
             self.client = boto3.client(
                 service_name="bedrock-runtime",
-                region_name="us-west-2"
+                region_name="us-west-2",
+                config=Config(max_pool_connections=50)
             )
 
     # 응답 생성
