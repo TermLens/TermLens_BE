@@ -93,7 +93,7 @@ def lambda_handler(event, context):
     # 2) 중요도 점수화
     scored_sentences = score_sentence_importance(sentences, client)
     important_sentences = [
-        item for item in scored_sentences if item.get("importance_score", 0) >= 3
+        item for item in scored_sentences if item.get("importance_score", 0) >= 4
     ]
     print(f"중요도 3 이상 문장 수: {len(important_sentences)}")
     print(f"중요도 3 이상 문장들 길이 합: {sum(len(item.get('sentence', '')) for item in important_sentences)}")
