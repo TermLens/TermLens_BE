@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
 from llm_client import LLMClient
@@ -30,6 +31,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
     if not sentences:
         return []
 
+    batch_size = 10
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 중요도 1~5로 평가하는 분석가입니다.
 입력은 JSON 객체이며, "sentences" 필드 아래에 다음 형태의 리스트가 주어집니다.
@@ -107,36 +109,44 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 - 애매할 때는 항상 한 단계 낮은 점수를 주어 보수적으로 평가합니다.
 """
 
-    message = json.dumps(
-        {
-            "sentences": [
-                {"input_index": idx, "sentence": sentence}
-                for idx, sentence in enumerate(sentences)
-            ]
-        },
-        ensure_ascii=False,
-    )
+    indexed_sentences = [
+        {"input_index": idx, "sentence": sentence}
+        for idx, sentence in enumerate(sentences)
+    ]
+    sentence_batches = [
+        indexed_sentences[i : i + batch_size]
+        for i in range(0, len(indexed_sentences), batch_size)
+    ]
 
-    response = client.generate_response(system_instruction, message)
-    parsed = _extract_json_fragment(response)
+    def _score_batch(batch: List[Dict]) -> List[Dict]:
+        message = json.dumps({"sentences": batch}, ensure_ascii=False)
+        response = client.generate_response(system_instruction, message)
+        parsed = _extract_json_fragment(response)
 
-    results = []
-    for item in parsed:
-        sentence = str(item.get("sentence", "")).strip()
-        try:
-            score = int(item.get("importance_score", 0))
-        except Exception:
-            score = 0
-        results.append(
-            {
-                "input_index": item.get("input_index"),
-                "sentence": sentence,
-                "importance_score": score,
-            }
-        )
+        batch_results = []
+        for item in parsed:
+            sentence = str(item.get("sentence", "")).strip()
+            try:
+                score = int(item.get("importance_score", 0))
+            except Exception:
+                score = 0
+            batch_results.append(
+                {
+                    "input_index": item.get("input_index"),
+                    "sentence": sentence,
+                    "importance_score": score,
+                }
+            )
+        return batch_results
+
+    all_results: List[Dict] = []
+    with ThreadPoolExecutor(max_workers=len(sentence_batches)) as executor:
+        futures = [executor.submit(_score_batch, batch) for batch in sentence_batches]
+        for future in as_completed(futures):
+            all_results.extend(future.result())
 
     # 입력 순서를 유지
-    return sorted(results, key=lambda x: x.get("input_index", 0))
+    return sorted(all_results, key=lambda x: x.get("input_index", 0))
 
 
 def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> List[Dict]:
