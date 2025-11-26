@@ -271,6 +271,6 @@ def split_sentences_block(block: str, client: Optional[LLMClient] = None) -> Lis
 
     language = "ko" if _is_korean_text(block) else "en"
     sentences = _split_by_rules(block, language)
-    print("rule-base 분리 후 문장들:")
-    print(sentences)
+    # print("rule-base 분리 후 문장들:")
+    # print(sentences)
     return sentences
