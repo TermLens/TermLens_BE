@@ -77,13 +77,11 @@ def lambda_handler(event, context):
                     }, ensure_ascii=False)
                 }
         
-        # 내용이 다르면 S3 업데이트
-        s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
-        print("캐시 내용 불일치, 새로 저장")
-    # except: 없는 경우 현재 url을 key로 tos_content 저장
+        # 내용이 다르면 새로 분석
+        print("캐시 내용 불일치, 새로 분석")
+    # except: 없는 경우 새로 분석
     except s3.exceptions.NoSuchKey:
-        s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
-        print("캐시 없음, 새로 저장")
+        print("캐시 없음, 새로 분석")
 
     client = LLMClient(temperature=0)
 
@@ -123,6 +121,9 @@ def lambda_handler(event, context):
         'overall_evaluation': evaluation_result.get("overall_evaluation"),
         'evaluation_for_each_clause': evaluation_result.get("evaluation_for_each_clause")
     })
+
+    # S3에 전처리된 약관 내용 저장
+    s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
 
     return {
         'statusCode': 200,
