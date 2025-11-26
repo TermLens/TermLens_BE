@@ -60,7 +60,7 @@ class LLMClient:
     def _generate_response_bedrock_claude(self, system_instruction: str, message: str) -> str:
 
         response = self.client.converse(
-            modelId="us.amazon.nova-micro-v1:0",
+            modelId="us.anthropic.claude-haiku-4-5-20251001-v1:0",
             inferenceConfig={
                 "temperature": self.temperature,
                 "topP": self.top_p
