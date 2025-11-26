@@ -1,4 +1,5 @@
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
 from llm_client import LLMClient
@@ -51,8 +52,7 @@ def summarize_by_category(categorized_sentences: List[Dict], client: LLMClient) 
 """
 
 
-    summaries = []
-    for category, items in grouped.items():
+    def _summarize_category(category: str, items: List[Dict]) -> Dict:
         message_lines = [
             f"카테고리: {category}",
             "중요 문장 목록:",
@@ -71,12 +71,20 @@ def summarize_by_category(categorized_sentences: List[Dict], client: LLMClient) 
         if marker_idx != -1:
             summary = summary[marker_idx + len(marker):].strip()
 
-        summaries.append(
-            {
-                "category": category,
-                "summary": summary,
-                "sentences": items,
-            }
-        )
+        return {
+            "category": category,
+            "summary": summary,
+            "sentences": items,
+        }
+
+    summaries: List[Dict] = []
+    categories = list(grouped.items())
+    with ThreadPoolExecutor(max_workers=len(categories) or 1) as executor:
+        futures = [
+            executor.submit(_summarize_category, category, items)
+            for category, items in categories
+        ]
+        for future in as_completed(futures):
+            summaries.append(future.result())
 
     return summaries
