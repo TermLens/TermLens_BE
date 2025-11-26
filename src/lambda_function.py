@@ -95,8 +95,8 @@ def lambda_handler(event, context):
     important_sentences = [
         item for item in scored_sentences if item.get("importance_score", 0) >= 4
     ]
-    print(f"중요도 3 이상 문장 수: {len(important_sentences)}")
-    print(f"중요도 3 이상 문장들 길이 합: {sum(len(item.get('sentence', '')) for item in important_sentences)}")
+    print(f"중요도 4 이상 문장 수: {len(important_sentences)}")
+    print(f"중요도 4 이상 문장들 길이 합: {sum(len(item.get('sentence', '')) for item in important_sentences)}")
 
     # 3) 카테고리 분류
     categorized = categorize_sentences(important_sentences, client)
