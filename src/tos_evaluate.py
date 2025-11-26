@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
 from llm_client import LLMClient
@@ -153,31 +154,31 @@ def evaluate_category_summaries(
     if not category_summaries:
         return {"overall_evaluation": "E", "evaluation_for_each_clause": []}
 
-    labels = []
-    clause_results = []
-    for item in category_summaries:
+    def _evaluate_item(item: Dict) -> Dict:
         evaluation = evaluate_summary(item.get("summary", ""), client)
         label = evaluation.get("label", "neutral")
-        fairness_score = evaluation.get("fairness_score", -1)
-        risk_score = evaluation.get("risk_score", -1)
-        transparency_score = evaluation.get("transparency_score", -1)
-        control_score = evaluation.get("control_score", -1)
-        reasoning = evaluation.get("reasoning", "error")
-        category = item.get("category", "UNKNOWN")
-        labels.append(label)
-
-        clause_results.append(
-            {
+        return {
+            "label": label,
+            "result": {
                 "evaluation": label,
                 "summarized_clause": item.get("summary", ""),
-                "category": category,
-                "fairness_score": fairness_score,
-                "risk_score": risk_score,
-                "transparency_score": transparency_score,
-                "control_score": control_score,
-                "reasoning": reasoning,
-            }
-        )
+                "category": item.get("category", "UNKNOWN"),
+                "fairness_score": evaluation.get("fairness_score", -1),
+                "risk_score": evaluation.get("risk_score", -1),
+                "transparency_score": evaluation.get("transparency_score", -1),
+                "control_score": evaluation.get("control_score", -1),
+                "reasoning": evaluation.get("reasoning", "error"),
+            },
+        }
+
+    labels = []
+    clause_results = []
+    with ThreadPoolExecutor(max_workers=len(category_summaries)) as executor:
+        futures = [executor.submit(_evaluate_item, item) for item in category_summaries]
+        for future in as_completed(futures):
+            data = future.result()
+            labels.append(data["label"])
+            clause_results.append(data["result"])
 
     overall = _calculate_overall_evaluation(labels)
 
