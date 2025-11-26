@@ -1,24 +1,8 @@
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List
 
+from json_utils import extract_json_fragment as _extract_json_fragment
 from llm_client import LLMClient
-
-
-def _extract_json_fragment(text: str):
-    obj_start = text.find("{")
-    arr_start = text.find("[")
-    starts = [i for i in [obj_start, arr_start] if i != -1]
-    if not starts:
-        raise ValueError("JSON 시작 구분자를 찾지 못했습니다.")
-
-    start = min(starts)
-    end_char = "}" if start == obj_start else "]"
-    end = text.rfind(end_char)
-    if end == -1:
-        raise ValueError("JSON 종료 구분자를 찾지 못했습니다.")
-
-    return json.loads(text[start : end + 1])
 
 
 def _calculate_overall_evaluation(labels: List[str]) -> str:
