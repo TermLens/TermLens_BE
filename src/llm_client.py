@@ -60,7 +60,7 @@ class LLMClient:
     def _generate_response_bedrock_claude(self, system_instruction: str, message: str) -> str:
 
         response = self.client.converse(
-            modelId="us.openai.gpt-oss-120b-1:0",
+            modelId="openai.gpt-oss-120b-1:0",
             inferenceConfig={
                 "temperature": self.temperature,
                 "topP": self.top_p
