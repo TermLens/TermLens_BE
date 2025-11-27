@@ -90,8 +90,19 @@ def lambda_handler(event, context):
     print(f"문장 분할 개수: {len(sentences)}")
     print(f"문장들 길이 합: {sum(len(s) for s in sentences)}")
 
+    # 1-1) 짧은 문장 필터링 (10자 이하 제거)
+    sentences = [s for s in sentences if len(s) > 10]
+    print(f"10자 이하 제거 후 문장 개수: {len(sentences)}")
+
     # 2) 중요도 점수화
     scored_sentences = score_sentence_importance(sentences, client)
+    # 중요도 결과에 원문 문장 재결합 (모델 출력에 sentence 포함 안 함)
+    index_to_sentence = {idx: sentences[idx].strip() for idx in range(len(sentences))}
+    for item in scored_sentences:
+        idx = item.get("input_index")
+        if idx in index_to_sentence:
+            item["sentence"] = index_to_sentence[idx]
+
     important_sentences = [
         item for item in scored_sentences if item.get("importance_score", 0) >= 4
     ]

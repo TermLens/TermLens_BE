@@ -29,8 +29,8 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 당신의 작업:
 - 각 sentence에 대해 importance_score (1~5)를 하나씩 부여합니다.
 - 결과는 JSON 배열로만 출력하며, 각 요소는 다음 필드를 포함해야 합니다.
-  { "input_index": <정수>, "sentence": "<원문 문장>", "importance_score": <1~5 정수> }
-- input_index와 sentence는 입력 값을 그대로 복사하되, 앞뒤 공백만 제거합니다.
+  { "input_index": <정수>, "importance_score": <1~5 정수> }
+- input_index는 입력 값을 그대로 복사합니다.
 - 출력 배열의 길이는 입력 "sentences" 리스트 길이와 같아야 하며, 모든 input_index가 포함되어야 합니다.
 - JSON 배열 이외의 텍스트(설명, 코드블록, 주석 등)는 절대 출력하지 마십시오.
 
@@ -107,7 +107,6 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 
         batch_results = []
         for item in parsed:
-            sentence = str(item.get("sentence", "")).strip()
             try:
                 score = int(item.get("importance_score", 0))
             except Exception:
@@ -115,7 +114,6 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
             batch_results.append(
                 {
                     "input_index": item.get("input_index"),
-                    "sentence": sentence,
                     "importance_score": score,
                 }
             )
