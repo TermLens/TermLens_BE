@@ -82,6 +82,9 @@ class LLMClient:
             messages=[{"role": "user", "content": [{"text": message}]}]
         )
 
+        # response 구조 print (디버깅 용도)
+        print(f"Bedrock response structure: {response}")
+
         return self._extract_bedrock_text(response)
 
     def _extract_bedrock_text(self, response: Dict[str, Any]) -> str:
