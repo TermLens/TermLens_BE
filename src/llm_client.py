@@ -83,50 +83,7 @@ class LLMClient:
         )
 
         # response 구조 print (디버깅 용도)
-        print(f"Bedrock response structure: {response}")
+        if model_size == "large":
+            print(f"Bedrock response structure: {response}")
 
-        return self._extract_bedrock_text(response)
-
-    def _extract_bedrock_text(self, response: Dict[str, Any]) -> str:
-        """
-        Bedrock 공급자별 응답 구조 차이를 흡수하여 텍스트를 추출한다.
-        """
-        output = response.get("output") or {}
-        message = output.get("message") or {}
-
-        # content는 모델마다 list/str 등 형태가 다를 수 있음
-        content: List[Any] = []
-        if isinstance(message.get("content"), list):
-            content = message["content"]
-        elif isinstance(message.get("content"), str):
-            content = [message["content"]]
-        elif isinstance(output.get("content"), list):
-            content = output["content"]
-
-        texts: List[str] = []
-        for item in content:
-            if isinstance(item, str):
-                texts.append(item)
-            elif isinstance(item, dict):
-                if isinstance(item.get("text"), str):
-                    texts.append(item["text"])
-                elif isinstance(item.get("content"), str):
-                    texts.append(item["content"])
-                elif isinstance(item.get("value"), str):
-                    texts.append(item["value"])
-                elif isinstance(item.get("data"), str):
-                    texts.append(item["data"])
-
-        # 일부 모델은 outputText/text/completion 등 다른 필드에 텍스트를 담을 수 있음
-        if not texts:
-            fallback_keys = ["outputText", "text", "completion"]
-            for key in fallback_keys:
-                val = output.get(key) or response.get(key)
-                if isinstance(val, str):
-                    texts.append(val)
-                    break
-
-        if not texts:
-            raise ValueError(f"LLM 응답에 텍스트 필드를 찾지 못했습니다: {response}")
-
-        return texts[0]
+        return response['output']['message']['content'][0]['text']
