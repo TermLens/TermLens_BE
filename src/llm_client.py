@@ -86,4 +86,4 @@ class LLMClient:
         if model_size == "large":
             print(f"Bedrock response structure: {response}")
 
-        return response['output']['message']['content'][0]['text'] if not selected_model.startswith("openai") else response['choices'][0]['message']['content']
+        return response['output']['message']['content'][0]['text'] if not selected_model.startswith("openai") else response['output']['message']['content'][1]['text']
