@@ -82,8 +82,4 @@ class LLMClient:
             messages=[{"role": "user", "content": [{"text": message}]}]
         )
 
-        # response 구조 print (디버깅 용도)
-        if model_size == "large":
-            print(f"Bedrock response structure: {response}")
-
         return response['output']['message']['content'][0]['text'] if not selected_model.startswith("openai") else response['output']['message']['content'][1]['text']

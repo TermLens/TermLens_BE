@@ -97,5 +97,6 @@ def extract_json_fragment(text: str) -> Any:
         except json.JSONDecodeError as err:
             last_error = err
             continue
-
+    
+    print("Failed JSON text:", text) # 디버깅용 출력
     raise ValueError(f"JSON 파싱에 실패했습니다: {last_error}")
