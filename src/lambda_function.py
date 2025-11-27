@@ -110,7 +110,19 @@ def lambda_handler(event, context):
     print(f"중요도 4 이상 문장들 길이 합: {sum(len(item.get('sentence', '')) for item in important_sentences)}")
 
     # 3) 카테고리 분류
-    categorized = categorize_sentences(important_sentences, client)
+    categorize_input = [
+        {"input_index": item.get("input_index"), "sentence": item.get("sentence", "")}
+        for item in important_sentences
+    ]
+    categorized_raw = categorize_sentences(categorize_input, client)
+    index_to_important = {item.get("input_index"): item for item in important_sentences}
+    categorized = []
+    for item in categorized_raw:
+        idx = item.get("input_index")
+        base = index_to_important.get(idx)
+        if base:
+            categorized.append({**base, "category": item.get("category", "기타")})
+
     # 카테고리별 문장 수 계산 후 출력 (디버깅 용도)
     category_counts = {}
     for item in categorized:

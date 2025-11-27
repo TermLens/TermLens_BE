@@ -145,19 +145,16 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 - 각 항목은 다음과 같은 형태입니다.
   {
     "input_index": <정수>,
-    "sentence": "<문장>",
-    "importance_score": <정수 1~5>
+    "sentence": "<문장>"
   }
 
 [출력 형식]
 - JSON 배열만 출력해야 합니다. 배열의 각 요소는 다음 필드를 포함합니다.
   {
     "input_index": <정수>,
-    "sentence": "<원문 문장>",
-    "importance_score": <정수 1~5>,
     "category": "<아래 목록 중 하나>"
   }
-- input_index, sentence, importance_score는 입력 값을 그대로 복사하고, category만 추가합니다.
+- input_index는 입력 값을 그대로 복사하고, category만 추가합니다.
 - category 필드는 아래 정의된 키 중 하나를 정확히 사용해야 합니다.
 - JSON 배열 이외의 설명/주석/코드블록 텍스트는 절대 출력하지 마십시오.
 
@@ -213,10 +210,13 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 - 애매할 때는 가장 관련성이 높은 category를 보수적으로 선택하고, 정말 어느 쪽으로도 분류하기 어려운 경우에만 "기타"를 사용하십시오.
 """
 
-
+    sanitized = [
+        {"input_index": item.get("input_index"), "sentence": str(item.get("sentence", "")).strip()}
+        for item in scored_sentences
+    ]
     sentence_batches = [
-        scored_sentences[i : i + batch_size]
-        for i in range(0, len(scored_sentences), batch_size)
+        sanitized[i : i + batch_size]
+        for i in range(0, len(sanitized), batch_size)
     ]
 
     def _categorize_batch(batch: List[Dict]) -> List[Dict]:
@@ -226,17 +226,10 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 
         batch_results = []
         for item in parsed:
-            sentence = str(item.get("sentence", "")).strip()
-            try:
-                score = int(item.get("importance_score", 0))
-            except Exception:
-                score = 0
             batch_results.append(
                 {
                     "input_index": item.get("input_index"),
-                    "sentence": sentence,
-                    "importance_score": score,
-                    "category": item.get("category", "OTHER"),
+                    "category": item.get("category", "기타"),
                 }
             )
         return batch_results
