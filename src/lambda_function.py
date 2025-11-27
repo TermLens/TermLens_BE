@@ -67,7 +67,7 @@ def lambda_handler(event, context):
         # 기존 tos_content와 비교
         if saved_tos_content == tos_content:
             # 동일하면 DynamoDB에서 이전 분석 결과를 가져와 return
-            db_response = table.get_item(Key={'url_hashed': url_hashed})
+            db_response = table.get_item(Key={'url': key})
             if 'Item' in db_response:
                 evaluation_result = db_response['Item']
                 print("캐시 존재, 이전 분석 결과 반환")
@@ -142,7 +142,7 @@ def lambda_handler(event, context):
 
     # DynamoDB에 분석 결과 저장
     table.put_item(Item={
-        'url_hashed': url_hashed,
+        'url': key,
         'overall_evaluation': evaluation_result.get("overall_evaluation"),
         'evaluation_for_each_clause': evaluation_result.get("evaluation_for_each_clause")
     })
