@@ -13,7 +13,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
     if not sentences:
         return []
 
-    batch_size = 7
+    batch_size = 5
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 중요도 1~5로 평가하는 분석가입니다.
 입력은 JSON 객체이며, "sentences" 필드 아래에 다음 형태의 리스트가 주어집니다.
@@ -138,7 +138,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
     if not scored_sentences:
         return []
 
-    batch_size = 7
+    batch_size = 5
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 미리 정의된 category로 분류하는 전문가입니다.
 

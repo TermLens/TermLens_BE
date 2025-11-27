@@ -15,7 +15,7 @@ from botocore.config import Config
 class LLMClient:
     
     # 환경에 따라 LLM 모델 선정 및 클라이언트 초기화
-    def __init__(self, temperature: float = 0.2, top_p: float = 0.9, small_model_id: str = "us.amazon.nova-micro-v1:0", large_model_id: str = "openai.gpt-oss-120b-1:0"):
+    def __init__(self, temperature: float = 0.2, top_p: float = 0.9, small_model_id: str = "us.amazon.nova-micro-v1:0", large_model_id: str = "openai.gpt-oss-20b-1:0"):
         
         self.temperature = temperature
         self.top_p = top_p
