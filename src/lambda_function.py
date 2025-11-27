@@ -99,7 +99,7 @@ def lambda_handler(event, context):
     # 중요도 결과에 원문 문장 재결합 (모델 출력에 sentence 포함 안 함)
     index_to_sentence = {idx: sentences[idx].strip() for idx in range(len(sentences))}
     for item in scored_sentences:
-        idx = item.get("input_index")
+        idx = item.get("id")
         if idx in index_to_sentence:
             item["sentence"] = index_to_sentence[idx]
 
@@ -111,14 +111,14 @@ def lambda_handler(event, context):
 
     # 3) 카테고리 분류
     categorize_input = [
-        {"input_index": item.get("input_index"), "sentence": item.get("sentence", "")}
+        {"id": item.get("id"), "sentence": item.get("sentence", "")}
         for item in important_sentences
     ]
     categorized_raw = categorize_sentences(categorize_input, client)
-    index_to_important = {item.get("input_index"): item for item in important_sentences}
+    index_to_important = {item.get("id"): item for item in important_sentences}
     categorized = []
     for item in categorized_raw:
-        idx = item.get("input_index")
+        idx = item.get("id")
         base = index_to_important.get(idx)
         if base:
             categorized.append({**base, "category": item.get("category", "기타")})

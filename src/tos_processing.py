@@ -13,15 +13,15 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
     if not sentences:
         return []
 
-    batch_size = 5
+    batch_size = 10
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 중요도 1~5로 평가하는 분석가입니다.
 입력은 JSON 객체이며, "sentences" 필드 아래에 다음 형태의 리스트가 주어집니다.
 
 {
   "sentences": [
-    { "input_index": 0, "sentence": "..." },
-    { "input_index": 1, "sentence": "..." },
+    { "id": 0, "sentence": "..." },
+    { "id": 1, "sentence": "..." },
     ...
   ]
 }
@@ -29,9 +29,9 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 당신의 작업:
 - 각 sentence에 대해 importance_score (1~5)를 하나씩 부여합니다.
 - 결과는 JSON 배열로만 출력하며, 각 요소는 다음 필드를 포함해야 합니다.
-  { "input_index": <정수>, "importance_score": <1~5 정수> }
-- input_index는 입력 값을 그대로 복사합니다.
-- 출력 배열의 길이는 입력 "sentences" 리스트 길이와 같아야 하며, 모든 input_index가 포함되어야 합니다.
+  { "id": <정수>, "importance_score": <1~5 정수> }
+- id는 입력 값을 그대로 복사합니다.
+- 출력 배열의 길이는 입력 "sentences" 리스트 길이와 같아야 하며, 모든 id가 포함되어야 합니다.
 - JSON 배열 이외의 텍스트(설명, 코드블록, 주석 등)는 절대 출력하지 마십시오.
 
 [importance_score 정의: '사용자 입장에서 얼마나 반드시 알아야 하는지']
@@ -92,7 +92,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 """
 
     indexed_sentences = [
-        {"input_index": idx, "sentence": sentence}
+        {"id": idx, "sentence": sentence}
         for idx, sentence in enumerate(sentences)
     ]
     sentence_batches = [
@@ -113,7 +113,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
                 score = 0
             batch_results.append(
                 {
-                    "input_index": item.get("input_index"),
+                    "id": item.get("id"),
                     "importance_score": score,
                 }
             )
@@ -126,7 +126,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
             all_results.extend(future.result())
 
     # 입력 순서를 유지
-    return sorted(all_results, key=lambda x: x.get("input_index", 0))
+    return sorted(all_results, key=lambda x: x.get("id", 0))
 
 
 def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> List[Dict]:
@@ -136,7 +136,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
     if not scored_sentences:
         return []
 
-    batch_size = 5
+    batch_size = 10
     system_instruction = """
 당신은 온라인 서비스 이용약관 문장을 미리 정의된 category로 분류하는 전문가입니다.
 
@@ -144,17 +144,17 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 - 입력은 JSON 객체이며, "sentences" 필드 아래에 리스트가 주어집니다.
 - 각 항목은 다음과 같은 형태입니다.
   {
-    "input_index": <정수>,
+    "id": <정수>,
     "sentence": "<문장>"
   }
 
 [출력 형식]
 - JSON 배열만 출력해야 합니다. 배열의 각 요소는 다음 필드를 포함합니다.
   {
-    "input_index": <정수>,
+    "id": <정수>,
     "category": "<아래 목록 중 하나>"
   }
-- input_index는 입력 값을 그대로 복사하고, category만 추가합니다.
+- id는 입력 값을 그대로 복사하고, category만 추가합니다.
 - category 필드는 아래 정의된 키 중 하나를 정확히 사용해야 합니다.
 - JSON 배열 이외의 설명/주석/코드블록 텍스트는 절대 출력하지 마십시오.
 
@@ -211,7 +211,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 """
 
     sanitized = [
-        {"input_index": item.get("input_index"), "sentence": str(item.get("sentence", "")).strip()}
+        {"id": item.get("id"), "sentence": str(item.get("sentence", "")).strip()}
         for item in scored_sentences
     ]
     sentence_batches = [
@@ -228,7 +228,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
         for item in parsed:
             batch_results.append(
                 {
-                    "input_index": item.get("input_index"),
+                    "id": item.get("id"),
                     "category": item.get("category", "기타"),
                 }
             )
@@ -240,4 +240,4 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
         for future in as_completed(futures):
             all_results.extend(future.result())
 
-    return sorted(all_results, key=lambda x: x.get("input_index", 0))
+    return sorted(all_results, key=lambda x: x.get("id", 0))
