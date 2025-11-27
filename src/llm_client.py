@@ -82,4 +82,4 @@ class LLMClient:
             messages=[{"role": "user", "content": [{"text": message}]}]
         )
 
-        return response['output']['message']['content'][0]['text'] if not selected_model.startswith("openai") else response['output']['message']['content'][1]['text']
+        return response['output']['message']['content'][0]['text'] if not selected_model.startswith("openai") else response['output']['message']['content'][-1]['text']
