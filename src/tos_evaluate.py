@@ -381,6 +381,8 @@ def evaluate_category_summaries(
             clause_results.append(data["result"])
 
     overall = _calculate_overall_evaluation(labels)
+    category_order = list(CATEGORY_EVAL_POINTS.keys())
+    clause_results.sort(key=lambda x: category_order.index(x["category"]) if x["category"] in category_order else len(category_order))
 
     return {
         "overall_evaluation": overall,
