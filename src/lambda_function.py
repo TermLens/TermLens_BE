@@ -1,4 +1,5 @@
 import json
+import hashlib
 from trafilatura import extract
 import boto3
 
@@ -50,22 +51,23 @@ def lambda_handler(event, context):
 
     # url에서 쿼리 파라미터(?), 해시(#) 제거
     url = url.split('?')[0].split('#')[0]
+    url_hashed = hashlib.sha256(url.encode('utf-8')).hexdigest()
 
     s3 = boto3.client("s3")
     bucket = 'inha-capstone-20-tos-content'
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('inha-capstone-20-tos-analysis')
-    key = url
+    key = url_hashed
 
     # try: S3에서 해당 url을 key로 갖는 객체 가져오기
     try:
-        response = s3.get_object(Bucket=bucket, Key=url)
+        response = s3.get_object(Bucket=bucket, Key=key)
         saved_tos_content = response['Body'].read().decode('utf-8')
 
         # 기존 tos_content와 비교
         if saved_tos_content == tos_content:
             # 동일하면 DynamoDB에서 이전 분석 결과를 가져와 return
-            db_response = table.get_item(Key={'url': url})
+            db_response = table.get_item(Key={'url_hashed': url_hashed})
             if 'Item' in db_response:
                 evaluation_result = db_response['Item']
                 print("캐시 존재, 이전 분석 결과 반환")
@@ -140,7 +142,7 @@ def lambda_handler(event, context):
 
     # DynamoDB에 분석 결과 저장
     table.put_item(Item={
-        'url': url,
+        'url_hashed': url_hashed,
         'overall_evaluation': evaluation_result.get("overall_evaluation"),
         'evaluation_for_each_clause': evaluation_result.get("evaluation_for_each_clause")
     })
