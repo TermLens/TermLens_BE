@@ -334,7 +334,7 @@ def evaluate_summary(category: str, summary: str, client: LLMClient) -> Dict:
     system_instruction = _build_system_instruction_for_category(category)
 
     message = f"[입력 요약 조항]\n{summary}"
-    response = client.generate_response(system_instruction, message)
+    response = client.generate_response(system_instruction, message, model_size="large")
 
     # 기대 형식:
     # {

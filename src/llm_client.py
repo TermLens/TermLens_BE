@@ -14,12 +14,15 @@ from botocore.config import Config
 class LLMClient:
     
     # 환경에 따라 LLM 모델 선정 및 클라이언트 초기화
-    def __init__(self, temperature: float = 0.2, top_p: float = 0.9):
+    def __init__(self, temperature: float = 0.2, top_p: float = 0.9, small_model_id: str = "us.amazon.nova-micro-v1:0", large_model_id: str = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"):
         
         self.temperature = temperature
         self.top_p = top_p
 
         self.provider = os.getenv("LLM_PROVIDER")
+        # Bedrock 모델 ID를 소형/대형으로 분리해 보관
+        self.small_model_id = small_model_id
+        self.large_model_id = large_model_id
         if (self.provider == "GEMINI"):
             # 로컬 테스트 환경 - gemini
             self.client = genai.Client()
@@ -33,12 +36,17 @@ class LLMClient:
 
     # 응답 생성
     # gemini와 bedrock claude 분기 처리
-    def generate_response(self, system_instruction: str, message: str) -> str:    
+    def generate_response(self, system_instruction: str, message: str, model_size: str = "small", model_id: str = None) -> str:    
         
         if (self.provider == "GEMINI"):
             return self._generate_response_gemini(system_instruction, message)
         else:
-            return self._generate_response_bedrock_claude(system_instruction, message)
+            return self._generate_response_bedrock_claude(
+                system_instruction,
+                message,
+                model_size=model_size,
+                model_id=model_id,
+            )
     
     # gemini로부터 응답 생성
     def _generate_response_gemini(self, system_instruction: str, message: str) -> str:
@@ -57,13 +65,17 @@ class LLMClient:
 
     # bedrock Claude로부터 응답 생성
     # claude 모델은 3.5 haiku 사용. 테스트에 걸리는 시간 줄이기 위함
-    def _generate_response_bedrock_claude(self, system_instruction: str, message: str) -> str:
+    def _generate_response_bedrock_claude(self, system_instruction: str, message: str, model_size: str = "small", model_id: str = None) -> str:
+
+        selected_model = model_id
+        if selected_model is None:
+            selected_model = self.large_model_id if model_size == "large" else self.small_model_id
 
         response = self.client.converse(
-            modelId="us.anthropic.claude-3-5-haiku-20241022-v1:0",
+            modelId=selected_model,
             inferenceConfig={
                 "temperature": self.temperature,
-                "topP": self.top_p
+                # "topP": self.top_p
             },
             system=[{"text": system_instruction}],
             messages=[{"role": "user", "content": [{"text": message}]}]

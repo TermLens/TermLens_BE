@@ -61,7 +61,7 @@ def summarize_by_category(categorized_sentences: List[Dict], client: LLMClient) 
             )
 
         message = "\n".join(message_lines)
-        summary = client.generate_response(system_instruction, message).strip()
+        summary = client.generate_response(system_instruction, message, model_size="large").strip()
 
         # 모델이 "요약:" 머리글을 덧붙이는 경우 이후 텍스트만 사용
         marker = "요약:\n\n"

@@ -102,7 +102,7 @@ def score_sentence_importance(sentences: List[str], client: LLMClient) -> List[D
 
     def _score_batch(batch: List[Dict]) -> List[Dict]:
         message = json.dumps({"sentences": batch}, ensure_ascii=False)
-        response = client.generate_response(system_instruction, message)
+        response = client.generate_response(system_instruction, message, model_size="small")
         parsed = _extract_json_fragment(response)
 
         batch_results = []
@@ -223,7 +223,7 @@ def categorize_sentences(scored_sentences: List[Dict], client: LLMClient) -> Lis
 
     def _categorize_batch(batch: List[Dict]) -> List[Dict]:
         message = json.dumps({"sentences": batch}, ensure_ascii=False)
-        response = client.generate_response(system_instruction, message)
+        response = client.generate_response(system_instruction, message, model_size="small")
         parsed = _extract_json_fragment(response)
 
         batch_results = []
