@@ -98,5 +98,8 @@ def extract_json_fragment(text: str) -> Any:
             last_error = err
             continue
     
+    print("CLEANED:", cleaned)
+    print("FRAGMENT:", fragment)
+    print("FRAGMENT repr:", repr(fragment))
     print("Failed JSON text:", text) # 디버깅용 출력
     raise ValueError(f"JSON 파싱에 실패했습니다: {last_error}")
