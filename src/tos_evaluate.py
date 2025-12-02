@@ -16,13 +16,13 @@ def _calculate_overall_evaluation(labels: List[str]) -> str:
     score_map = {"good": 1, "neutral": 0.4, "bad": -1}
     avg_score = sum(score_map.get(label, 0) for label in labels) / len(labels)
 
-    if avg_score >= 0.7:
+    if avg_score >= 0.5:
         return "A"  # 거의 대부분이 사용자 친화적
     if avg_score >= 0.4:
         return "B"  # good 우세, bad 적음
-    if avg_score >= 0.0:
+    if avg_score >= 0.2:
         return "C"  # 중립적이거나 균형
-    if avg_score >= -0.4:
+    if avg_score >= 0:
         return "D"  # bad가 다소 많음
     return "E"  # bad가 대부분
 
