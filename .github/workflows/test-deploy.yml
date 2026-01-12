@@ -1,4 +1,4 @@
-name: Deploy Python Lambda to AWS (from src)
+name: Deploy Python Lambda to AWS (from src) for testing
 
 on:
   push:
