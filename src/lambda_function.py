@@ -54,9 +54,9 @@ def lambda_handler(event, context):
     url_hashed = hashlib.sha256(url.encode('utf-8')).hexdigest()
 
     s3 = boto3.client("s3")
-    bucket = 'inha-capstone-20-tos-content'
+    bucket = 'termlens-tos-content'
     dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('inha-capstone-20-tos-analysis')
+    table = dynamodb.Table('termlens-tos-analysis')
     key = url_hashed
 
     # try: S3에서 해당 url을 key로 갖는 객체 가져오기
