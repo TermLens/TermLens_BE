@@ -45,22 +45,35 @@ fi
 HTML_CONTENT=$(cat "$FILE_PATH")
 
 # jq를 사용하여 안전하게 JSON payload 생성
-# lambda_function.py가 기대하는 구조:
-# {
-#   "queryStringParameters": { "url": "..." },
-#   "body": "..."
-# }
 PAYLOAD=$(jq -n \
             --arg url "$URL" \
             --arg body "$HTML_CONTENT" \
             '{queryStringParameters: {url: $url}, body: $body}')
 
 # Lambda 함수 호출
-echo "Invoking Lambda function using content from $FILE_PATH ..."
-awslocal lambda invoke \
+echo "Invoking Lambda function (Real AWS)..."
+aws lambda invoke \
     --function-name analyzeTermsOfServices \
     --payload "$PAYLOAD" \
-    output.json
+    --region ap-northeast-2 \
+    --log-type Tail \
+    output.json > invoke_result.json
 
-echo "Response:"
+# 결과 처리
+echo "================================================================"
+echo "[Execution Log]"
+# LogResult 필드를 추출
+LOG_RESULT=$(cat invoke_result.json | jq -r '.LogResult')
+
+if [ "$LOG_RESULT" != "null" ] && [ -n "$LOG_RESULT" ]; then
+    # base64 디코딩 시도, 실패 시 원본 출력 (디버깅용)
+    echo "$LOG_RESULT" | base64 -di || echo "[WARN] Base64 decode failed. Raw LogResult: $LOG_RESULT"
+else
+    echo "[WARN] No LogResult found in response."
+fi
+echo "================================================================"
+echo "[Function Output]"
 cat output.json | jq '.'
+
+# 임시 파일 정리
+rm invoke_result.json
