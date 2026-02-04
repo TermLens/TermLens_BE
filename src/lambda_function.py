@@ -51,38 +51,33 @@ def lambda_handler(event, context):
 
     # url에서 쿼리 파라미터(?), 해시(#) 제거
     url = url.split('?')[0].split('#')[0]
-    url_hashed = hashlib.sha256(url.encode('utf-8')).hexdigest()
+    # URL 해시: DynamoDB 조회용 키
+    url_hash = hashlib.sha256(url.encode('utf-8')).hexdigest()
+    # 콘텐츠 해시: 페이지 본문 변경 여부 확인용
+    content_hash = hashlib.sha256(tos_content.encode('utf-8')).hexdigest()
 
-    s3 = boto3.client("s3")
-    bucket = 'termlens-tos-content'
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('termlens-tos-analysis')
-    key = url_hashed
 
-    # try: S3에서 해당 url을 key로 갖는 객체 가져오기
-    try:
-        response = s3.get_object(Bucket=bucket, Key=key)
-        saved_tos_content = response['Body'].read().decode('utf-8')
+    # DynamoDB에서 URL 해시로 기존 분석 결과 조회
+    db_response = table.get_item(Key={'url': url_hash})
 
-        # 기존 tos_content와 비교
-        if saved_tos_content == tos_content:
-            # 동일하면 DynamoDB에서 이전 분석 결과를 가져와 return
-            db_response = table.get_item(Key={'url': key})
-            if 'Item' in db_response:
-                evaluation_result = db_response['Item']
-                print("캐시 존재, 이전 분석 결과 반환")
-                return {
-                    'statusCode': 200,
-                    'body': json.dumps({
-                        "overall_evaluation": evaluation_result.get("overall_evaluation"),
-                        "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
-                    }, ensure_ascii=False)
-                }
-        
-        # 내용이 다르면 새로 분석
+    # 기존 분석 결과가 있고, 콘텐츠 해시가 일치하면 캐시 반환
+    if 'Item' in db_response and db_response['Item'].get('content_hash') == content_hash:
+        evaluation_result = db_response['Item']
+        print("캐시 존재, 이전 분석 결과 반환")
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                "overall_evaluation": evaluation_result.get("overall_evaluation"),
+                "evaluation_for_each_clause": evaluation_result.get("evaluation_for_each_clause")
+            }, ensure_ascii=False)
+        }
+
+    # 캐시가 없거나 콘텐츠가 변경된 경우 새로 분석
+    if 'Item' in db_response:
         print("캐시 내용 불일치, 새로 분석")
-    # except: 없는 경우 새로 분석
-    except s3.exceptions.NoSuchKey:
+    else:
         print("캐시 없음, 새로 분석")
 
     client = LLMClient(temperature=0)
@@ -140,15 +135,13 @@ def lambda_handler(event, context):
     # 5) 요약 평가
     evaluation_result = evaluate_category_summaries(category_summaries, client)
 
-    # DynamoDB에 분석 결과 저장
+    # DynamoDB에 분석 결과와 콘텐츠 해시 저장
     table.put_item(Item={
-        'url': key,
+        'url': url_hash,
+        'content_hash': content_hash,
         'overall_evaluation': evaluation_result.get("overall_evaluation"),
         'evaluation_for_each_clause': evaluation_result.get("evaluation_for_each_clause")
     })
-
-    # S3에 전처리된 약관 내용 저장
-    s3.put_object(Bucket=bucket, Key=key, Body=tos_content.encode('utf-8'))
 
     return {
         'statusCode': 200,
