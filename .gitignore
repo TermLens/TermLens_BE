@@ -2,3 +2,5 @@ src/__pycache__/
 build/
 deploy-package.zip
 output.json
+
+.codex
